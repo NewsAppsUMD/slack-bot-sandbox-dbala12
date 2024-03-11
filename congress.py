@@ -1,0 +1,31 @@
+import os
+import json
+import requests
+from slack import WebClient
+from slack.errors import SlackApiError
+
+congress_key = os.environ.get('CONGRESS_API_KEY')
+slack_token = os.environ.get('SLACK_API_TOKEN')
+
+url = f"https://api.congress.gov/v3/committee-report/118"
+
+r = requests.get(url, headers={'x-api-key': congress_key})
+
+reports = r.json()['reports']
+first_report = reports[0]
+
+msg = f"The latest committee reportg is {first_report['citation']}, which was issues on {first_report['updateDate']}. The url is {first_report['url']}"
+
+client = WebClient(token=slack_token)
+try:
+    response = client.chat_postMessage(
+        channel="slack-bots",
+        text=msg,
+        unfurl_links=True, 
+        unfurl_media=True
+    )
+    print("success!")
+except SlackApiError as e:
+    assert e.response["ok"] is False
+    assert e.response["error"]
+    print(f"Got an error: {e.response['error']}")
